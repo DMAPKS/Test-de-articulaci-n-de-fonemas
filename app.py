@@ -8,88 +8,87 @@ st.set_page_config(
     layout="wide"
 )
 
-# Título principal
-st.title("🗣️ Test de Articulación de Fonemas - Evaluación Visual")
-st.write("Visualiza la lámina del test y registra el estado de articulación de cada fonema.")
+st.title("🗣️ Panel Visual Interactivo de Fonemas")
+st.write("Visualiza tu lámina de referencia y haz clic directamente en los botones de los fonemas para cambiar su estado de evaluación.")
 
-# Datos generales del paciente en la parte superior
-with st.container():
-    col_n1, col_n2, col_n3 = st.columns(3)
-    with col_n1:
-        nombre_paciente = st.text_input("Nombre del paciente o alumno:")
-    with col_n2:
-        edad = st.number_input("Edad (años):", min_value=1, max_value=18, value=5)
-    with col_n3:
-        evaluador = st.text_input("Terapeuta / Evaluador:")
+# Inicializar los estados de los fonemas en la memoria de la app
+fonemas_lista = ["P", "B", "T", "D", "K", "G", "F", "S", "J", "CH", "Y", "M", "N", "Ñ", "L", "R", "RR"]
+
+if "estados_fonemas" not in st.session_state:
+    st.session_state.estados_fonemas = {f: "Correcto 🟢" for f in fonemas_lista}
+
+# Datos generales
+col_p1, col_p2 = st.columns(2)
+with col_p1:
+    nombre_paciente = st.text_input("Nombre del paciente o alumno:")
+with col_p2:
+    evaluador = st.text_input("Terapeuta / Evaluador:")
 
 st.markdown("---")
 
-# Distribución en dos columnas: Izquierda la Imagen, Derecha los controles interactivos
-col_imagen, col_controles = st.columns([1.2, 1])
+# Distribución: Imagen a la izquierda, Panel visual interactivo a la derecha
+col_imagen, col_panel = st.columns([1.2, 1])
 
 with col_imagen:
-    st.subheader("🖼️ Lámina de Evaluación")
-    
-    # Verificamos si la imagen existe en el repositorio para mostrarla
-    nombre_archivo_imagen = "lamina.png" # <--- CAMBIA ESTE NOMBRE SI TU ARCHIVO SE LLAMA DIFERENTE
+    st.subheader("🖼️ Lámina de Referencia")
+    nombre_archivo_imagen = "lamina.png"  # Asegúrate de subir tu imagen con este nombre a GitHub
     
     if os.path.exists(nombre_archivo_imagen):
-        st.image(nombre_archivo_imagen, caption="Lámina oficial de fonemas", use_container_width=True)
+        st.image(nombre_archivo_imagen, caption="Lámina oficial", use_container_width=True)
     else:
         st.warning(
-            f"⚠️ No se encontró la imagen '{nombre_archivo_imagen}' en tu repositorio de GitHub. "
-            "Sube tu imagen con ese nombre exacto a la raíz del repositorio para que aparezca aquí."
+            f"⚠️ No se encontró la imagen '{nombre_archivo_imagen}' en el repositorio. "
+            "Sube tu archivo de imagen a la raíz de GitHub para visualizarlo aquí."
         )
-        st.info("Mientras tanto, puedes realizar la evaluación utilizando el panel de selección de la derecha.")
 
-with col_controles:
-    st.subheader("⚙️ Panel de Registro de Fonemas")
-    st.write("Selecciona el diagnóstico para cada fonema evaluado:")
+with col_panel:
+    st.subheader("🎛️ Panel Visual de Control")
+    st.write("Haz clic sobre cualquier fonema para cambiar su estado cíclicamente:")
     
-    # Listado de fonemas organizados por categorías fonológicas
-    fonemas_por_grupo = {
-        "Oclusivos": ["P", "B", "T", "D", "K", "G"],
-        "Fricativos": ["F", "S", "J", "CH", "Y"],
-        "Nasales y Líquidos": ["M", "N", "Ñ", "L", "R", "RR"]
-    }
+    # Leyenda rápida
+    st.caption("🟢 Correcto | 🟡 Sustitución | 🟠 Omisión | 🔴 Distorsión")
     
-    resultados = {}
-    
-    for grupo, lista in fonemas_por_grupo.items():
-        with st.expander(f"📁 Grupo: {grupo}", expanded=True):
-            for fonema in lista:
-                c1, c2 = st.columns([1, 2])
-                with c1:
-                    st.markdown(f"**/{fonema}/**")
-                with c2:
-                    # Usamos colores o estados claros
-                    estado = st.selectbox(
-                        f"/{fonema}/",
-                        ["Correcto 🟢", "Sustitución 🟡", "Omisión 🟠", "Distorsión 🔴"],
-                        key=f"fonema_{fonema}",
-                        label_visibility="collapsed"
-                    )
-                    resultados[fonema] = estado
+    # Crear una cuadrícula de botones interactivos
+    cols = st.columns(3)
+    for i, fonema in enumerate(fonemas_lista):
+        col_idx = i % 3
+        estado_actual = st.session_state.estados_fonemas[fonema]
+        
+        # Texto del botón con su estado actual
+        boton_label = f"/{fonema}/\n{estado_actual}"
+        
+        with cols[col_idx]:
+            if st.button(boton_label, key=f"btn_{fonema}", use_container_width=True):
+                # Ciclar al hacer clic: Correcto -> Sustitución -> Omisión -> Distorsión -> Correcto
+                if "Correcto" in estado_actual:
+                    st.session_state.estados_fonemas[fonema] = "Sustitución 🟡"
+                elif "Sustitución" in estado_actual:
+                    st.session_state.estados_fonemas[fonema] = "Omisión 🟠"
+                elif "Omisión" in estado_actual:
+                    st.session_state.estados_fonemas[fonema] = "Distorsión 🔴"
+                else:
+                    st.session_state.estados_fonemas[fonema] = "Correcto 🟢"
+                st.rerun()  # Recarga la pantalla al instante para reflejar el cambio
 
 st.markdown("---")
 
-# Sección final de observaciones y guardado
-st.subheader("📝 Observaciones Clínicas y Resultados")
-observaciones = st.text_area("Anota aquí los datos relevantes de la evaluación fonológica:")
+# Sección de resultados y guardado
+st.subheader("📋 Resumen de la Evaluación")
+observaciones = st.text_area("Notas u observaciones clínicas:")
 
-if st.button("💾 Guardar Evaluación", type="primary", use_container_width=True):
+if st.button("💾 Guardar y Finalizar Evaluación", type="primary", use_container_width=True):
     if not nombre_paciente.strip():
-        st.warning("⚠️ Por favor, ingresa el nombre del paciente antes de guardar.")
+        st.warning("⚠️ Ingresa el nombre del paciente antes de guardar.")
     else:
-        st.success(f"¡Evaluación guardada exitosamente para **{nombre_paciente}**!")
+        st.success(f"¡Evaluación registrada para **{nombre_paciente}**!")
         
-        # Filtrar los que no están correctos
-        alteraciones = {f: est for f, est in resultados.items() if not est.startswith("Correcto")}
+        # Filtrar alteraciones
+        alteraciones = {f: est for f, est in st.session_state.estados_fonemas.items() if "Correcto" not in est}
         
         if alteraciones:
-            st.warning(f"Se detectaron **{len(alteraciones)}** fonemas alterados:")
+            st.warning(f"Se registraron **{len(alteraciones)}** alteraciones:")
             for f, e in alteraciones.items():
                 st.write(f"- **/{f}/**: {e}")
         else:
             st.balloons()
-            st.success("🎉 ¡Excelente! No se registran alteraciones en los fonemas evaluados.")
+            st.success("🎉 ¡Excelente desempeño! Sin alteraciones fonológicas detectadas.")
