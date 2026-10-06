@@ -7,24 +7,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS dinámicos para colorear el fondo completo de los botones según su estado
-st.markdown("""
-    <style>
-    /* Estilo base para los botones de fonemas */
-    .stButton button {
-        width: 100%;
-        border-radius: 6px;
-        font-weight: 700;
-        font-size: 14px;
-        padding: 8px 4px;
-        border: 1px solid rgba(0,0,0,0.15);
-        transition: all 0.2s ease-in-out;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("🗣️ Lámina de Articulación de Fonemas - Panel Gráfico")
-st.write("Haz clic sobre cada tarjeta para colorear el cuadro completo y cambiar su estado de evaluación.")
+st.title("🗣️ Lámina Interactiva de Fonemas")
+st.write("Haz clic sobre cada cuadro de fonema para alternar su estado de evaluación.")
 
 # Definición de los grupos de fonemas
 grupos_fonemas = {
@@ -37,8 +21,8 @@ grupos_fonemas = {
 # Inicializar estados en la sesión
 todos_los_tokens = [f for lista in grupos_fonemas.values() for f in lista]
 
-if "estados_colores" not in st.session_state:
-    st.session_state.estados_colores = {token: "🟢" for token in todos_los_tokens}
+if "estados_interactivos" not in st.session_state:
+    st.session_state.estados_interactivos = {token: "🟢 Logra" for token in todos_los_tokens}
 
 # Datos generales
 with st.container():
@@ -53,10 +37,11 @@ with st.container():
 st.markdown("---")
 
 # Leyenda de estados superior
-st.markdown("**Leyenda (Haz clic para alternar color):** 🟢 Logra | 🟡 No logra | 🟠 Omisión | 🔴 Distorsión")
+st.markdown("### 📋 Leyenda de Estados")
+st.markdown("🟢 **Logra** | 🟡 **No logra** | 🟠 **Omisión** | 🔴 **Distorsión**")
 st.markdown("---")
 
-# Renderizado del tablero con colores de fondo completos
+# Renderizado del tablero interactivo
 for categoria, tokens in grupos_fonemas.items():
     st.markdown(f"### {categoria}")
     
@@ -66,48 +51,22 @@ for categoria, tokens in grupos_fonemas.items():
     for fila in filas:
         cols = st.columns(elementos_por_fila)
         for idx, token in enumerate(fila):
-            estado = st.session_state.estados_colores[token]
+            estado_actual = st.session_state.estados_interactivos[token]
             
-            # Definir colores de fondo y texto según el estado actual
-            if estado == "🟢":
-                bg_color = "#d4edda"  # Verde claro
-                border_color = "#c3e6cb"
-                text_color = "#155724"
-            elif estado == "🟡":
-                bg_color = "#fff3cd"  # Amarillo claro
-                border_color = "#ffeeba"
-                text_color = "#856404"
-            elif estado == "🟠":
-                bg_color = "#ffe8d6"  # Naranja claro
-                border_color = "#ffd8b8"
-                text_color = "#b85d00"
-            else:
-                bg_color = "#f8d7da"  # Rojo claro
-                border_color = "#f5c6cb"
-                text_color = "#721c24"
-
-            # Inyectar estilo visual personalizado por cada botón para pintar todo el cuadro
-            st.markdown(f"""
-                <style>
-                div.stButton > button[key*="btn_{token}"] {{
-                    background-color: {bg_color} !important;
-                    color: {text_color} !important;
-                    border-color: {border_color} !important;
-                }}
-                </style>
-            """, unsafe_allow_html=True)
-
+            # Etiqueta que muestra el fonema y su estado actual claramente en el botón
+            label_boton = f"{token}\n{estado_actual}"
+            
             with cols[idx]:
-                if st.button(f"{token}", key=f"btn_{token}"):
+                if st.button(label_boton, key=f"btn_fonema_{token}", use_container_width=True):
                     # Rotación cíclica de estados al hacer clic
-                    if estado == "🟢":
-                        st.session_state.estados_colores[token] = "🟡"
-                    elif estado == "🟡":
-                        st.session_state.estados_colores[token] = "🟠"
-                    elif estado == "🟠":
-                        st.session_state.estados_colores[token] = "🔴"
+                    if estado_actual == "🟢 Logra":
+                        st.session_state.estados_interactivos[token] = "🟡 No logra"
+                    elif estado_actual == "🟡 No logra":
+                        st.session_state.estados_interactivos[token] = "🟠 Omisión"
+                    elif estado_actual == "🟠 Omisión":
+                        st.session_state.estados_interactivos[token] = "🔴 Distorsión"
                     else:
-                        st.session_state.estados_colores[token] = "🟢"
+                        st.session_state.estados_interactivos[token] = "🟢 Logra"
                     st.rerun()
 
 st.markdown("---")
@@ -122,7 +81,7 @@ if st.button("💾 Guardar Evaluación", type="primary", use_container_width=Tru
     else:
         st.success(f"¡Evaluación guardada exitosamente para **{nombre_paciente}**!")
         
-        alteraciones = {t: e for t, e in st.session_state.estados_colores.items() if e != "🟢"}
+        alteraciones = {t: e for t, e in st.session_state.estados_interactivos.items() if "Logra" not in e}
         if alteraciones:
             st.warning(f"Se registraron **{len(alteraciones)}** fonemas con alteraciones:")
             for t, e in alteraciones.items():
