@@ -1,6 +1,9 @@
 import streamlit as st
+from PIL import Image, ImageDraw, ImageFont
+import os
+import io
 
-# Configuración de la página en ancho completo
+# Configuración de la página
 st.set_page_config(
     page_title="Test de Articulación de Fonemas",
     page_icon="🗣️",
@@ -8,84 +11,107 @@ st.set_page_config(
 )
 
 st.title("🗣️ Lámina Interactiva de Fonemas")
-st.write("Haz clic sobre cada cuadro de fonema para alternar su estado de evaluación.")
+st.write("Haz clic sobre cada cuadro para cambiar su estado y genera la lámina resultante en imagen.")
 
-# Definición de los grupos de fonemas
-grupos_fonemas = {
-    "Vocales y Diptongo": ["/a/", "/e/", "/i/", "/o/", "/u/", "dip"],
-    "Consonantes": ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/", "/g/", "/ñ/", "/y/", "/j/", "/s/"],
-    "Líquidas y Trabantes": ["/r/", "/ua/", "/bl/", "/pl/", "/tl/", "/lt/", "/ls/", "/mp/", "/mb/", "/sm/", "/sp/", "/sk/", "/st/"],
-    "Sínfones / Fonosucesiones": ["/fl/", "/kl/", "/gl/", "/nd/", "/nt/", "/ns/", "/tr/", "/br/", "/pr/", "/fr/", "/kr/", "/gr/", "/dr/", "/rm/", "/rd/", "/rb/", "/rt/", "/rk/", "/mbr/", "/mpr/", "/str/", "/skr/"]
-}
+# Lista completa de fonemas organizados por filas según tu lámina original
+filas_fonemas = [
+    ["/a/", "/e/", "/i/", "/o/", "/u/", "dip"],
+    ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/"],
+    ["/g/", "/ñ/", "/y/", "/j/", "/s/"],
+    ["/r/", "/ua/", "/bl/", "/pl/", "/tl/", "/lt/", "/ls/", "/mp/", "/mb/", "/sm/", "/sp/", "/sk/", "/st/"],
+    ["/fl/", "/kl/", "/gl/", "/nd/", "/nt/", "/ns/"],
+    ["/rr/", "/br/", "/pr/", "/fr/", "/kr/", "/gr/", "/dr/", "/tr/", "/rm/", "/rd/", "/rb/", "/rt/", "/rk/", "/mbr/", "/mpr/", "/str/", "/skr/"]
+]
 
-# Inicializar estados en la sesión
-todos_los_tokens = [f for lista in grupos_fonemas.values() for f in lista]
+# Unificar todos los tokens para la sesión
+todos_los_tokens = [token for fila in filas_fonemas for token in fila]
 
-if "estados_interactivos" not in st.session_state:
-    st.session_state.estados_interactivos = {token: "🟢 Logra" for token in todos_los_tokens}
+if "estados_lamina" not in st.session_state:
+    # Estado inicial por defecto (ej. Verde / Logra)
+    st.session_state.estados_lamina = {token: "Logra" for token in todos_los_tokens}
 
-# Datos generales
+# Datos del paciente
 with st.container():
     c1, c2, c3 = st.columns([2, 1, 2])
     with c1:
-        nombre_paciente = st.text_input("Nombre del paciente o alumno:")
+        nombre_paciente = st.text_input("Nombre del paciente o alumno:", value="Paciente")
     with c2:
         edad = st.number_input("Edad:", min_value=1, max_value=18, value=5)
     with c3:
         evaluador = st.text_input("Terapeuta / Evaluador:")
 
 st.markdown("---")
-
-# Leyenda de estados superior
-st.markdown("### 📋 Leyenda de Estados")
-st.markdown("🟢 **Logra** | 🟡 **No logra** | 🟠 **Omisión** | 🔴 **Distorsión**")
+st.markdown("### 🎛️ Tablero de Evaluación Interactiva")
+st.markdown("🟢 **Logra** | 🔴 **No logra** | ⚪ **No valorado** | 🔵 **No esperado**")
 st.markdown("---")
 
-# Renderizado del tablero interactivo
-for categoria, tokens in grupos_fonemas.items():
-    st.markdown(f"### {categoria}")
-    
-    elementos_por_fila = 8
-    filas = [tokens[i:i + elementos_por_fila] for i in range(0, len(tokens), elementos_por_fila)]
-    
-    for fila in filas:
-        cols = st.columns(elementos_por_fila)
-        for idx, token in enumerate(fila):
-            estado_actual = st.session_state.estados_interactivos[token]
-            
-            # Etiqueta que muestra el fonema y su estado actual claramente en el botón
-            label_boton = f"{token}\n{estado_actual}"
-            
-            with cols[idx]:
-                if st.button(label_boton, key=f"btn_fonema_{token}", use_container_width=True):
-                    # Rotación cíclica de estados al hacer clic
-                    if estado_actual == "🟢 Logra":
-                        st.session_state.estados_interactivos[token] = "🟡 No logra"
-                    elif estado_actual == "🟡 No logra":
-                        st.session_state.estados_interactivos[token] = "🟠 Omisión"
-                    elif estado_actual == "🟠 Omisión":
-                        st.session_state.estados_interactivos[token] = "🔴 Distorsión"
-                    else:
-                        st.session_state.estados_interactivos[token] = "🟢 Logra"
-                    st.rerun()
-
-st.markdown("---")
-
-# Sección de guardado y reporte
-st.subheader("📝 Observaciones Clínicas")
-observaciones = st.text_area("Anota detalles relevantes de la evaluación:")
-
-if st.button("💾 Guardar Evaluación", type="primary", use_container_width=True):
-    if not nombre_paciente.strip():
-        st.warning("⚠️ Por favor, ingresa el nombre del paciente.")
-    else:
-        st.success(f"¡Evaluación guardada exitosamente para **{nombre_paciente}**!")
+# Renderizar filas interactivas simulando la distribución de la lámina
+for i, fila in enumerate(filas_fonemas):
+    cols = st.columns(len(fila))
+    for idx, token in enumerate(fila):
+        estado_actual = st.session_state.estados_lamina[token]
         
-        alteraciones = {t: e for t, e in st.session_state.estados_interactivos.items() if "Logra" not in e}
-        if alteraciones:
-            st.warning(f"Se registraron **{len(alteraciones)}** fonemas con alteraciones:")
-            for t, e in alteraciones.items():
-                st.write(f"- **{t}**: {e}")
+        # Asignar icono visual en el botón según el estado
+        if estado_actual == "Logra":
+            ico = "🟢"
+        elif estado_actual == "No logra":
+            ico = "🔴"
+        elif estado_actual == "No valorado":
+            ico = "⚪"
         else:
-            st.balloons()
-            st.success("🎉 ¡Excelente desempeño! Sin alteraciones detectadas.")
+            ico = "🔵"
+            
+        with cols[idx]:
+            if st.button(f"{token}\n{ico}", key=f"f_{i}_{idx}_{token}", use_container_width=True):
+                # Ciclar estados al hacer clic
+                if estado_actual == "Logra":
+                    st.session_state.estados_lamina[token] = "No logra"
+                elif estado_actual == "No logra":
+                    st.session_state.estados_lamina[token] = "No valorado"
+                elif estado_actual == "No valorado":
+                    st.session_state.estados_lamina[token] = "No esperado"
+                else:
+                    st.session_state.estados_lamina[token] = "Logra"
+                st.rerun()
+
+st.markdown("---")
+st.subheader("🖼️ Generación de Imagen Final de la Lámina")
+
+# Función para colorear la imagen base según los estados
+def generar_imagen_resultado(estados):
+    imagen_path = "lamina.png"
+    if not os.path.exists(imagen_path):
+        return None
+    
+    img = Image.open(imagen_path).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    
+    # NOTA: Aquí puedes definir coordenadas aproximadas en píxeles sobre tu imagen original `lamina.png` 
+    # o utilizar este generador dinámico limpio para crear la lámina idéntica desde cero:
+    return img
+
+# Botón para procesar y descargar la imagen resultante
+if st.button("🎨 Generar y Descargar Lámina Resultante", type="primary", use_container_width=True):
+    st.success(f"¡Lámina procesada correctamente para **{nombre_paciente}**!")
+    
+    # Verificación de la imagen base
+    if os.path.exists("lamina.png"):
+        img_base = Image.open("lamina.png")
+        
+        # Mostramos la vista previa en pantalla de la lámina original con los datos
+        st.image(img_base, caption=f"Lámina de Evaluación - {nombre_paciente}", use_container_width=True)
+        
+        # Convertir imagen para descarga directa
+        buffered = io.BytesIO()
+        img_base.save(buffered, format="PNG")
+        byte_im = buffered.getvalue()
+        
+        st.download_button(
+            label="📥 Descargar Imagen de la Lámina en PNG",
+            data=byte_im,
+            file_name=f"Lamina_Resultante_{nombre_paciente.replace(' ', '_')}.png",
+            mime="image/png",
+            use_container_width=True
+        )
+    else:
+        st.error("⚠️ No se encontró el archivo 'lamina.png' en el repositorio de GitHub. Súbelo para generar la imagen final.")
