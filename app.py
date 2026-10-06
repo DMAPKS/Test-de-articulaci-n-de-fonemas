@@ -2,45 +2,52 @@ import streamlit as st
 
 # Configuración de la página en ancho completo
 st.set_page_config(
-    page_title="Test de Articulación de Fonemas - Lámina Interactiva",
+    page_title="Test de Articulación de Fonemas",
     page_icon="🗣️",
     layout="wide"
 )
 
-# Estilo visual personalizado para imitar la lámina gráfica
+# Estilos CSS personalizados para imitar exactamente el diseño gráfico de la lámina
 st.markdown("""
     <style>
     .stButton button {
-        border-radius: 8px;
-        font-weight: bold;
-        border: 1px solid rgba(49, 51, 63, 0.2);
-        transition: all 0.3s ease;
+        width: 100%;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 8px 4px;
+        background-color: #ffffff;
+        color: #262730;
+        border: 1px solid #d6d6d6;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        transition: all 0.2s ease-in-out;
     }
     .stButton button:hover {
-        border-color: #ff4b4b;
-        color: #ff4b4b;
+        border-color: #0068c9;
+        color: #0068c9;
+        background-color: #f0f2f6;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🗣️ Lámina Gráfica Interactiva de Fonemas")
-st.write("Haz clic directamente en cualquier tarjeta de fonema para alternar su estado de evaluación.")
+st.title("🗣️ Lámina de Articulación de Fonemas")
+st.write("Haz clic sobre cada fonema para alternar su estado visual.")
 
-# Definición de los grupos de fonemas en formato de arreglo gráfico
+# Definición de los grupos de fonemas exactamente como en tu lámina
 grupos_fonemas = {
     "Vocales y Diptongo": ["/a/", "/e/", "/i/", "/o/", "/u/", "dip"],
-    "Consonantes Principales": ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/", "/g/", "/ñ/", "/y/", "/j/", "/s/"],
+    "Consonantes": ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/", "/g/", "/ñ/", "/y/", "/j/", "/s/"],
     "Líquidas y Trabantes": ["/r/", "/ua/", "/bl/", "/pl/", "/tl/", "/lt/", "/ls/", "/mp/", "/mb/", "/sm/", "/sp/", "/sk/", "/st/"],
-    "Fonosucesiones / Sínfones": ["/fl/", "/kl/", "/gl/", "/nd/", "/nt/", "/ns/", "/tr/", "/br/", "/pr/", "/fr/", "/kr/", "/gr/", "/dr/", "/rm/", "/rd/", "/rb/", "/rt/", "/rk/", "/mbr/", "/mpr/", "/str/", "/skr/"]
+    "Sínfones / Fonosucesiones": ["/fl/", "/kl/", "/gl/", "/nd/", "/nt/", "/ns/", "/tr/", "/br/", "/pr/", "/fr/", "/kr/", "/gr/", "/dr/", "/rm/", "/rd/", "/rb/", "/rt/", "/rk/", "/mbr/", "/mpr/", "/str/", "/skr/"]
 }
 
-# Inicializar los estados en la sesión
+# Inicializar estados en la sesión
 todos_los_tokens = [f for lista in grupos_fonemas.values() for f in lista]
 
-if "estados_graficos" not in st.session_state:
-    st.session_state.estados_graficos = {token: "Logra 🟢" for token in todos_los_tokens}
+if "estados_exactos" not in st.session_state:
+    st.session_state.estados_exactos = {token: "🟢" for token in todos_los_tokens}
 
-# Barra superior de datos generales
+# Datos generales
 with st.container():
     c1, c2, c3 = st.columns([2, 1, 2])
     with c1:
@@ -52,65 +59,54 @@ with st.container():
 
 st.markdown("---")
 
-# Leyenda de referencia gráfica
-st.markdown("### 📋 Leyenda de Estados")
-st.caption("🟢 **Logra** (Correcto) ➔ 🟡 **No logra** (Sustitución) ➔ 🟠 **Omisión** ➔ 🔴 **Distorsión**")
+# Leyenda de estados superior
+st.markdown("**Leyenda:** 🟢 Logra | 🟡 No logra | 🟠 Omisión | 🔴 Distorsión")
+st.markdown("---")
 
-# Generación del arreglo gráfico por categorías y filas
+# Renderizado en formato de cuadrícula horizontal idéntico a la lámina
 for categoria, tokens in grupos_fonemas.items():
-    st.subheader(f"📌 {categoria}")
+    st.markdown(f"### {categoria}")
     
-    # Distribución en filas de 6 elementos para mantener el orden de la lámina
-    elementos_por_fila = 6
+    # Agrupar en filas de hasta 8 elementos para mantener un flujo horizontal amplio
+    elementos_por_fila = 8
     filas = [tokens[i:i + elementos_por_fila] for i in range(0, len(tokens), elementos_por_fila)]
     
     for fila in filas:
         cols = st.columns(elementos_por_fila)
         for idx, token in enumerate(fila):
-            estado_actual = st.session_state.estados_graficos[token]
+            estado_actual = st.session_state.estados_exactos[token]
+            etiqueta = f"{token} {estado_actual}"
             
-            # Formato visual corto para que luzca limpio en la tarjeta
-            if "Logra" in estado_actual:
-                etiqueta_boton = f"{token}\n🟢"
-            elif "No logra" in estado_actual:
-                etiqueta_boton = f"{token}\n🟡"
-            elif "Omisión" in estado_actual:
-                etiqueta_boton = f"{token}\n🟠"
-            else:
-                etiqueta_boton = f"{token}\n🔴"
-
             with cols[idx]:
-                if st.button(etiqueta_boton, key=f"graf_{token}", use_container_width=True):
-                    # Rotar estados al hacer clic de forma cíclica
-                    if "Logra" in estado_actual:
-                        st.session_state.estados_graficos[token] = "No logra 🟡"
-                    elif "No logra" in estado_actual:
-                        st.session_state.estados_graficos[token] = "Omisión 🟠"
-                    elif "Omisión" in estado_actual:
-                        st.session_state.estados_graficos[token] = "Distorsión 🔴"
+                if st.button(etiqueta, key=f"f_{token}---{categoria}"):
+                    # Rotación cíclica de estados al hacer clic
+                    if estado_actual == "🟢":
+                        st.session_state.estados_exactos[token] = "🟡"
+                    elif estado_actual == "🟡":
+                        st.session_state.estados_exactos[token] = "🟠"
+                    elif estado_actual == "🟠":
+                        st.session_state.estados_exactos[token] = "🔴"
                     else:
-                        st.session_state.estados_graficos[token] = "Logra 🟢"
+                        st.session_state.estados_exactos[token] = "🟢"
                     st.rerun()
 
 st.markdown("---")
 
-# Observaciones y Guardado
+# Sección de guardado y reporte
 st.subheader("📝 Observaciones Clínicas")
-observaciones = st.text_area("Anota detalles de la evaluación fonológica:")
+observaciones = st.text_area("Anota detalles relevantes de la evaluación:")
 
-if st.button("💾 Guardar y Procesar Evaluación", type="primary", use_container_width=True):
+if st.button("💾 Guardar Evaluación", type="primary", use_container_width=True):
     if not nombre_paciente.strip():
-        st.warning("⚠️ Por favor, ingresa el nombre del paciente antes de guardar.")
+        st.warning("⚠️ Por favor, ingresa el nombre del paciente.")
     else:
-        st.success(f"¡Evaluación registrada exitosamente para **{nombre_paciente}**!")
+        st.success(f"¡Evaluación guardada exitosamente para **{nombre_paciente}**!")
         
-        # Filtrar alteraciones detectadas
-        alteraciones = {t: e for t, e in st.session_state.estados_graficos.items() if "Logra" not in e}
-        
+        alteraciones = {t: e for t, e in st.session_state.estados_exactos.items() if e != "🟢"}
         if alteraciones:
-            st.warning(f"Se detectaron **{len(alteraciones)}** elementos con alteraciones:")
-            for token, estado in alteraciones.items():
-                st.write(f"- **{token}**: {estado}")
+            st.warning(f"Se registraron **{len(alteraciones)}** fonemas con alteraciones:")
+            for t, e in alteraciones.items():
+                st.write(f"- **{t}**: {e}")
         else:
             st.balloons()
-            st.success("🎉 ¡Excelente desempeño! No se registraron alteraciones fonológicas.")
+            st.success("🎉 ¡Excelente desempeño! Sin alteraciones detectadas.")
