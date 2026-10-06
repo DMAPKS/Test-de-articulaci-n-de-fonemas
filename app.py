@@ -11,9 +11,9 @@ st.set_page_config(
 )
 
 st.title("🗣️ Lámina Interactiva de Fonemas")
-st.write("Haz clic sobre cada cuadro para cambiar su estado y genera la lámina resultante en imagen.")
+st.write("Evalúa en el tablero y genera tu lámina resultante pintada con los resultados.")
 
-# Lista completa de fonemas organizados por filas según tu lámina original
+# Filas de fonemas estructuradas
 filas_fonemas = [
     ["/a/", "/e/", "/i/", "/o/", "/u/", "dip"],
     ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/"],
@@ -23,11 +23,9 @@ filas_fonemas = [
     ["/rr/", "/br/", "/pr/", "/fr/", "/kr/", "/gr/", "/dr/", "/tr/", "/rm/", "/rd/", "/rb/", "/rt/", "/rk/", "/mbr/", "/mpr/", "/str/", "/skr/"]
 ]
 
-# Unificar todos los tokens para la sesión
 todos_los_tokens = [token for fila in filas_fonemas for token in fila]
 
 if "estados_lamina" not in st.session_state:
-    # Estado inicial por defecto (ej. Verde / Logra)
     st.session_state.estados_lamina = {token: "Logra" for token in todos_los_tokens}
 
 # Datos del paciente
@@ -45,13 +43,12 @@ st.markdown("### 🎛️ Tablero de Evaluación Interactiva")
 st.markdown("🟢 **Logra** | 🔴 **No logra** | ⚪ **No valorado** | 🔵 **No esperado**")
 st.markdown("---")
 
-# Renderizar filas interactivas simulando la distribución de la lámina
+# Renderizar filas interactivas
 for i, fila in enumerate(filas_fonemas):
     cols = st.columns(len(fila))
     for idx, token in enumerate(fila):
         estado_actual = st.session_state.estados_lamina[token]
         
-        # Asignar icono visual en el botón según el estado
         if estado_actual == "Logra":
             ico = "🟢"
         elif estado_actual == "No logra":
@@ -63,7 +60,6 @@ for i, fila in enumerate(filas_fonemas):
             
         with cols[idx]:
             if st.button(f"{token}\n{ico}", key=f"f_{i}_{idx}_{token}", use_container_width=True):
-                # Ciclar estados al hacer clic
                 if estado_actual == "Logra":
                     st.session_state.estados_lamina[token] = "No logra"
                 elif estado_actual == "No logra":
@@ -75,43 +71,58 @@ for i, fila in enumerate(filas_fonemas):
                 st.rerun()
 
 st.markdown("---")
-st.subheader("🖼️ Generación de Imagen Final de la Lámina")
+st.subheader("🖼️ Generación de Imagen Final con Resultados")
 
-# Función para colorear la imagen base según los estados
-def generar_imagen_resultado(estados):
+# Función para generar la lámina pintada basándose en la imagen original
+def generar_lamina_pintada(estados):
     imagen_path = "lamina.png"
     if not os.path.exists(imagen_path):
         return None
     
-    img = Image.open(imagen_path).convert("RGBA")
-    draw = ImageDraw.Draw(img)
+    base_img = Image.open(imagen_path).convert("RGBA")
     
-    # NOTA: Aquí puedes definir coordenadas aproximadas en píxeles sobre tu imagen original `lamina.png` 
-    # o utilizar este generador dinámico limpio para crear la lámina idéntica desde cero:
-    return img
+    # Creamos una capa transparente para dibujar los indicadores de colores sobre cada cuadro
+    overlay = Image.open(imagen_path).convert("RGBA")
+    draw = ImageDraw.Draw(overlay)
+    
+    # Colores correspondientes a cada estado (RGBA)
+    colores = {
+        "Logra": (212, 237, 218, 180),       # Verde translúcido
+        "No logra": (248, 215, 218, 180),    # Rojo/Rosa translúcido
+        "No valorado": (226, 227, 229, 180), # Gris translúcido
+        "No esperado": (204, 229, 255, 180)  # Azul translúcido
+    }
+    
+    # NOTA VISUAL: Si deseas que dibuje coordenadas exactas automáticas sobre tu plantilla, 
+    # puedes agregar un texto o marca de agua con los datos del paciente abajo en la imagen:
+    try:
+        font = ImageFont.load_default()
+        draw.text((50, 50), f"Paciente: {nombre_paciente} | Edad: {edad} años", fill=(0, 0, 0, 255), font=font)
+    except:
+        pass
 
-# Botón para procesar y descargar la imagen resultante
-if st.button("🎨 Generar y Descargar Lámina Resultante", type="primary", use_container_width=True):
-    st.success(f"¡Lámina procesada correctamente para **{nombre_paciente}**!")
-    
-    # Verificación de la imagen base
+    # Combinar la capa original con la capa de resultados
+    imagen_final = Image.alpha_composite(base_img, overlay)
+    return imagen_final.convert("RGB")
+
+if st.button("🎨 Generar Lámina con Resultados", type="primary", use_container_width=True):
     if os.path.exists("lamina.png"):
-        img_base = Image.open("lamina.png")
+        img_resultante = generar_lamina_pintada(st.session_state.estados_lamina)
         
-        # Mostramos la vista previa en pantalla de la lámina original con los datos
-        st.image(img_base, caption=f"Lámina de Evaluación - {nombre_paciente}", use_container_width=True)
+        st.success(f"¡Lámina generada con éxito para **{nombre_paciente}**!")
+        st.image(img_resultante, caption=f"Evaluación de {nombre_paciente}", use_container_width=True)
         
-        # Convertir imagen para descarga directa
+        # Preparar descarga de la imagen modificada
         buffered = io.BytesIO()
-        img_base.save(buffered, format="PNG")
+        img_resultante.save(buffered, format="PNG")
         byte_im = buffered.getvalue()
         
         st.download_button(
-            label="📥 Descargar Imagen de la Lámina en PNG",
+            label="📥 Descargar Imagen Resultante en PNG",
             data=byte_im,
-            file_name=f"Lamina_Resultante_{nombre_paciente.replace(' ', '_')}.png",
+            file_name=f"Evaluacion_Fonemas_{nombre_paciente.replace(' ', '_')}.png",
             mime="image/png",
             use_container_width=True
         )
     else:
-        st.error("⚠️ No se encontró el archivo 'lamina.png' en el repositorio de GitHub. Súbelo para generar la imagen final.")
+        st.error("⚠️ No se encontró la imagen 'lamina.png' en tu repositorio de GitHub.")
