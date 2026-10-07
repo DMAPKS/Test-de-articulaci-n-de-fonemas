@@ -13,7 +13,7 @@ st.set_page_config(
 st.title("Matriz Fonológica - Análisis y Niveles del Lenguaje")
 st.write("Haz clic sobre cada fonema para cambiar su estado y generar el gráfico final.")
 
-# Filas de fonemas estructuradas exactamente como en tu lámina
+# Filas de fonemas en el orden correcto original
 filas_fonemas = [
     ["/a/", "/e/", "/i/", "/o/", "/u/", "dip"],
     ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/"],
@@ -28,7 +28,7 @@ todos_los_tokens = [token for fila in filas_fonemas for token in fila]
 if "estados_matriz" not in st.session_state:
     st.session_state.estados_matriz = {token: "Logra" for token in todos_los_tokens}
 
-# Leyenda de estados superior idéntica a tu video
+# Leyenda de estados superior
 st.markdown("### Leyenda de Estados")
 cols_leyenda = st.columns(4)
 with cols_leyenda[0]:
@@ -42,51 +42,55 @@ with cols_leyenda[3]:
 
 st.markdown("---")
 
-# Colores exactos para cada estado
+# Mapeo de colores y textos para los estados
 colores_map = {
-    "Logra": {"bg": "#d4edda", "border": "#c3e6cb", "text": "#155724"},
-    "No logra": {"bg": "#f8d7da", "border": "#f5c6cb", "text": "#721c24"},
-    "No valorado": {"bg": "#e2e3e5", "border": "#d6d8db", "text": "#383d41"},
-    "No esperado": {"bg": "#cce5ff", "border": "#b8daff", "text": "#004085"}
+    "Logra": {"bg": "#d4edda", "border": "#c3e6cb", "text": "#155724", "ico": "🟢"},
+    "No logra": {"bg": "#f8d7da", "border": "#f5c6cb", "text": "#721c24", "ico": "🔴"},
+    "No valorado": {"bg": "#e2e3e5", "border": "#d6d8db", "text": "#383d41", "ico": "⚪"},
+    "No esperado": {"bg": "#cce5ff", "border": "#b8daff", "text": "#004085", "ico": "🔵"}
 }
 
-# Estilos CSS avanzados para que los botones tengan el color de fondo exacto y tipografía adecuada
+# Inyectar estilos para que los botones interactivos ocupen todo el ancho y muestren el texto completo
 st.markdown("""
     <style>
-    /* Forzar diseño limpio y responsivo en tablets y PC */
-    .stButton button {
-        width: 100% !important;
-        border-radius: 8px !important;
-        font-weight: 700 !important;
-        font-size: 11px !important;
-        padding: 4px 1px !important;
-        min-height: 50px !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    .phoneme-btn {
+        width: 100%;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 11px;
+        padding: 6px 2px;
+        min-height: 52px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+        border: 1px solid transparent;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 8px;
+        text-decoration: none !important;
+    }
+    .phoneme-btn span {
+        font-size: 10px;
+        margin-top: 2px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Renderizado del tablero interactivo por filas
+# Renderizado interactivo usando formularios o botones de Streamlit optimizados por filas
 for i, fila in enumerate(filas_fonemas):
     cols = st.columns(len(fila))
     for idx, token in enumerate(fila):
         estado = st.session_state.estados_matriz[token]
         c_info = colores_map[estado]
         
-        if estado == "Logra":
-            ico = "🟢"
-        elif estado == "No logra":
-            ico = "🔴"
-        elif estado == "No valorado":
-            ico = "⚪"
-        else:
-            ico = "🔵"
-            
         with cols[idx]:
-            # Para evitar el corte de texto en fonemas largos como /mbr/, /mpr/, /skr/ en tabletas, 
-            # mostramos el token limpio ajustando el tamaño visual del botón
-            label_btn = f"{token}\n{ico}"
-            if st.button(label_btn, key=f"mat_{i}_{idx}_{token}", use_container_width=True):
+            # Creamos un botón nativo estilizado mediante clases inyectadas o estado de Streamlit
+            btn_key = f"mat_{i}_{idx}_{token}"
+            
+            # Para garantizar que el botón se pinte por completo en la tablet, usamos un botón de Streamlit limpio
+            if st.button(f"{token}\n{c_info['ico']}", key=btn_key, use_container_width=True):
                 if estado == "Logra":
                     st.session_state.estados_matriz[token] = "No logra"
                 elif estado == "No logra":
@@ -97,18 +101,13 @@ for i, fila in enumerate(filas_fonemas):
                     st.session_state.estados_matriz[token] = "Logra"
                 st.rerun()
             
-            # Inyectar color de fondo personalizado directamente al botón correspondiente
+            # CSS específico para colorear este botón exacto por completo
             st.markdown(f"""
                 <style>
-                div[data-testid="column"]:nth-of-type({idx+1}) button {{
+                div[data-testid="column"]:nth-of-type({idx+1}) button[key*="{token.replace('/', '')}"] {{
                     background-color: {c_info["bg"]} !important;
                     color: {c_info["text"]} !important;
                     border: 1px solid {c_info["border"]} !important;
-                }}
-                div[data-testid="column"]:nth-of-type({idx+1}) button:hover {{
-                    background-color: {c_info["border"]} !important;
-                    color: {c_info["text"]} !important;
-                    border: 1px solid {c_info["text"]} !important;
                 }}
                 </style>
             """, unsafe_allow_html=True)
@@ -144,7 +143,7 @@ def generar_grafico_matriz(estados):
         y_pos = y_start - (i * row_height)
         for token in fila:
             est = estados[token]
-            c_info = colores_map[est]
+            c_info = colores_map[est if est in colores_map else "Logra"]
             
             rect = patches.FancyBboxPatch(
                 (x_start, y_pos), box_width, box_height,
