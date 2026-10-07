@@ -42,20 +42,54 @@ with cols_leyenda[3]:
 
 st.markdown("---")
 
-# Estilos CSS personalizados para los botones de la matriz
-st.markdown("""
-    <style>
-    .stButton button {
-        width: 100%;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 13px;
-        padding: 5px 2px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Diccionario de colores para los estados
+colores_map = {
+    "Logra": {"bg": "#d4edda", "border": "#c3e6cb", "text": "#155724"},
+    "No logra": {"bg": "#f8d7da", "border": "#f5c6cb", "text": "#721c24"},
+    "No valorado": {"bg": "#e2e3e5", "border": "#d6d8db", "text": "#383d41"},
+    "No esperado": {"bg": "#cce5ff", "border": "#b8daff", "text": "#004085"}
+}
 
-# Renderizado del tablero interactivo por filas
+# Generar estilos CSS dinámicos para que cada botón tome el color exacto de su estado y se adapte en tablets
+css_botones = """
+<style>
+/* Estilo base para todos los botones de la matriz */
+.stButton button {
+    width: 100% !important;
+    border-radius: 6px !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    padding: 6px 2px !important;
+    min-height: 48px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+"""
+
+# Inyectar clases CSS personalizadas por estado para colorear los botones por completo
+for token in todos_los_tokens:
+    est = st.session_state.estados_matriz[token]
+    c_info = colores_map[est]
+    # Limpiar caracteres especiales del token para usarlos en el selector CSS de Streamlit
+    safe_key = token.replace("/", "").replace("...", "").replace(" ", "_")
+    css_botones += f"""
+    button[key*="{safe_key}"] {{
+        background-color: {c_info["bg"]} !important;
+        color: {c_info["text"]} !important;
+        border: 1px solid {c_info["border"]} !important;
+    }}
+    button[key*="{safe_key}"]:hover {{
+        background-color: {c_info["border"]} !important;
+        color: {c_info["text"]} !important;
+        border: 1px solid {c_info["text"]} !important;
+    }}
+    """
+
+css_botones += "</style>"
+st.markdown(css_botones, unsafe_allow_html=True)
+
+# Renderizado del tablero interactivo por filas adaptado a tablets
 for i, fila in enumerate(filas_fonemas):
     cols = st.columns(len(fila))
     for idx, token in enumerate(fila):
@@ -86,19 +120,10 @@ st.markdown("---")
 
 # Función para generar la imagen PNG con separación real entre cajitas
 def generar_grafico_matriz(estados):
-    # Lienzo amplio para contener toda la estructura sin rebasar
     fig, ax = plt.subplots(figsize=(13, 7))
     ax.set_xlim(0, 18.5)
     ax.set_ylim(0, 8)
     ax.axis('off')
-    
-    # Colores exactos en formato HEX
-    colores_map = {
-        "Logra": {"bg": "#d4edda", "edge": "#c3e6cb", "text": "#155724"},
-        "No logra": {"bg": "#f8d7da", "edge": "#f5c6cb", "text": "#721c24"},
-        "No valorado": {"bg": "#e2e3e5", "edge": "#d6d8db", "text": "#383d41"},
-        "No esperado": {"bg": "#cce5ff", "edge": "#b8daff", "text": "#004085"}
-    }
     
     # Dibujar Leyenda superior en el gráfico de forma balanceada
     leyendas = [
@@ -115,9 +140,9 @@ def generar_grafico_matriz(estados):
     y_start = 6.0
     row_height = 0.9
     
-    box_width = 0.72   # Ancho de la cajita
-    box_height = 0.6   # Alto de la cajita
-    step_x = 0.86      # Distancia de avance mayor al ancho, creando espacio real (gap de 0.14)
+    box_width = 0.72   
+    box_height = 0.6   
+    step_x = 0.86      
     
     for i, fila in enumerate(filas_fonemas):
         x_start = 0.6
@@ -126,23 +151,25 @@ def generar_grafico_matriz(estados):
             est = estados[token]
             c_info = colores_map[est]
             
-            # Dibujar cajita con esquinas redondeadas y separación garantizada
+            # Mapeo clave interna para el reporte gráfico
+            bg_col = c_info["bg"]
+            ed_col = c_info["border"]
+            tx_col = c_info["text"]
+            
             rect = patches.FancyBboxPatch(
                 (x_start, y_pos), box_width, box_height,
                 boxstyle="round,pad=0.02,rounding_size=0.1",
-                facecolor=c_info["bg"],
-                edgecolor=c_info["edge"],
+                facecolor=bg_col,
+                edgecolor=ed_col,
                 linewidth=1.5
             )
             ax.add_patch(rect)
             
-            # Texto del fonema centrado en la caja
-            ax.text(x_start + (box_width / 2.0), y_pos + (box_height / 2.0), token, color=c_info["text"], 
+            ax.text(x_start + (box_width / 2.0), y_pos + (box_height / 2.0), token, color=tx_col, 
                     fontsize=9.5, fontweight='bold', ha='center', va='center')
             
             x_start += step_x
 
-    # Guardar en buffer de memoria
     buf = io.BytesIO()
     plt.savefig(buf, format="png", bbox_inches='tight', dpi=300)
     buf.seek(0)
