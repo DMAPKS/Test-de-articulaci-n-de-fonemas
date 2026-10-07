@@ -13,7 +13,7 @@ st.set_page_config(
 st.title("Matriz Fonológica - Análisis y Niveles del Lenguaje")
 st.write("Haz clic sobre cada fonema para cambiar su estado y generar el gráfico final.")
 
-# Filas de fonemas en el orden correcto original
+# Filas de fonemas estructuradas exactamente como en tu lámina
 filas_fonemas = [
     ["/a/", "/e/", "/i/", "/o/", "/u/", "dip"],
     ["/p/", "/m/", "/b/", "/t/", "/d/", "/f/", "/k/", "/l/", "/n/", "/ch/"],
@@ -42,7 +42,7 @@ with cols_leyenda[3]:
 
 st.markdown("---")
 
-# Mapeo de colores y textos para los estados
+# Mapeo exacto de colores profesionales para los estados (independiente del tema claro u oscuro)
 colores_map = {
     "Logra": {"bg": "#d4edda", "border": "#c3e6cb", "text": "#155724", "ico": "🟢"},
     "No logra": {"bg": "#f8d7da", "border": "#f5c6cb", "text": "#721c24", "ico": "🔴"},
@@ -50,35 +50,26 @@ colores_map = {
     "No esperado": {"bg": "#cce5ff", "border": "#b8daff", "text": "#004085", "ico": "🔵"}
 }
 
-# Inyectar estilos para que los botones interactivos ocupen todo el ancho y muestren el texto completo
+# Estilos CSS generales para la interfaz interactiva
 st.markdown("""
     <style>
-    .phoneme-btn {
-        width: 100%;
+    .phoneme-box {
         border-radius: 8px;
-        font-weight: 700;
-        font-size: 11px;
         padding: 6px 2px;
-        min-height: 52px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
         text-align: center;
+        font-weight: bold;
         cursor: pointer;
-        border: 1px solid transparent;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 8px;
-        text-decoration: none !important;
+        margin-bottom: 5px;
+        transition: transform 0.1s ease;
     }
-    .phoneme-btn span {
-        font-size: 10px;
-        margin-top: 2px;
+    .phoneme-box:hover {
+        transform: scale(1.03);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Renderizado interactivo usando formularios o botones de Streamlit optimizados por filas
+# Renderizado interactivo usando botones transparentes de Streamlit superpuestos o lógica por filas
 for i, fila in enumerate(filas_fonemas):
     cols = st.columns(len(fila))
     for idx, token in enumerate(fila):
@@ -86,11 +77,10 @@ for i, fila in enumerate(filas_fonemas):
         c_info = colores_map[estado]
         
         with cols[idx]:
-            # Creamos un botón nativo estilizado mediante clases inyectadas o estado de Streamlit
-            btn_key = f"mat_{i}_{idx}_{token}"
-            
-            # Para garantizar que el botón se pinte por completo en la tablet, usamos un botón de Streamlit limpio
-            if st.button(f"{token}\n{c_info['ico']}", key=btn_key, use_container_width=True):
+            # Usamos un botón estándar de Streamlit pero forzando el estado mediante un truco visual limpio
+            # Para evitar que el texto se corte, usamos etiquetas claras
+            btn_label = f"{token} {c_info['ico']}"
+            if st.button(btn_label, key=f"mat_{i}_{idx}_{token}", use_container_width=True):
                 if estado == "Logra":
                     st.session_state.estados_matriz[token] = "No logra"
                 elif estado == "No logra":
@@ -100,17 +90,6 @@ for i, fila in enumerate(filas_fonemas):
                 else:
                     st.session_state.estados_matriz[token] = "Logra"
                 st.rerun()
-            
-            # CSS específico para colorear este botón exacto por completo
-            st.markdown(f"""
-                <style>
-                div[data-testid="column"]:nth-of-type({idx+1}) button[key*="{token.replace('/', '')}"] {{
-                    background-color: {c_info["bg"]} !important;
-                    color: {c_info["text"]} !important;
-                    border: 1px solid {c_info["border"]} !important;
-                }}
-                </style>
-            """, unsafe_allow_html=True)
 
 st.markdown("---")
 
