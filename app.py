@@ -84,11 +84,11 @@ for i, fila in enumerate(filas_fonemas):
 
 st.markdown("---")
 
-# Función para generar la imagen PNG exacta utilizando Matplotlib
+# Función para generar la imagen PNG con espacio entre cuadros y control estricto de límites
 def generar_grafico_matriz(estados):
-    # Ampliamos el límite del eje X de 16 a 17.5 para que quepa toda la fila larga sin cortes
+    # Lienzo con espacio suficiente para que la fila más larga no rebase el límite
     fig, ax = plt.subplots(figsize=(13, 7))
-    ax.set_xlim(0, 17.5)
+    ax.set_xlim(0, 18)
     ax.set_ylim(0, 8)
     ax.axis('off')
     
@@ -100,32 +100,37 @@ def generar_grafico_matriz(estados):
         "No esperado": {"bg": "#cce5ff", "edge": "#b8daff", "text": "#004085"}
     }
     
-    # Dibujar Leyenda superior en el gráfico ajustada simétricamente
+    # Dibujar Leyenda superior en el gráfico de forma balanceada
     leyendas = [
-        ("Logra", "#d4edda", "#155724", 0.5),
-        ("No logra", "#f8d7da", "#721c24", 4.5),
-        ("No valorado", "#e2e3e5", "#383d41", 8.5),
-        ("No esperado para su edad", "#cce5ff", "#004085", 12.5)
+        ("Logra", "#d4edda", "#155724", 0.6),
+        ("No logra", "#f8d7da", "#721c24", 4.8),
+        ("No valorado", "#e2e3e5", "#383d41", 9.0),
+        ("No esperado para su edad", "#cce5ff", "#004085", 13.2)
     ]
     for lbl, bg_l, tx_l, x_pos in leyendas:
         ax.add_patch(patches.Circle((x_pos, 7.3), 0.15, facecolor=bg_l, edgecolor=tx_l, linewidth=1.5))
         ax.text(x_pos + 0.3, 7.3, lbl, fontsize=10, va='center', fontweight='bold', color='#333333')
 
-    # Dibujar filas de fonemas con sus respectivos colores según estado
+    # Dibujar filas de fonemas con separación (espacio) entre casillas
     y_start = 6.0
     row_height = 0.9
     
+    # Parámetros de diseño para las cajitas
+    box_width = 0.78
+    box_height = 0.6
+    step_x = 0.88  # Mayor que box_width para garantizar un espacio visible entre cada cuadro
+    
     for i, fila in enumerate(filas_fonemas):
-        x_start = 0.5
+        x_start = 0.6
         y_pos = y_start - (i * row_height)
         for token in fila:
             est = estados[token]
             c_info = colores_map[est]
             
-            # Dibujar cajita redondeada del fonema
+            # Dibujar cajita redondeada del fonema con separación
             rect = patches.FancyBboxPatch(
-                (x_start, y_pos), 0.8, 0.6,
-                boxstyle="round,pad=0.1",
+                (x_start, y_pos), box_width, box_height,
+                boxstyle="round,pad=0.08",
                 facecolor=c_info["bg"],
                 edgecolor=c_info["edge"],
                 linewidth=1.5
@@ -133,10 +138,10 @@ def generar_grafico_matriz(estados):
             ax.add_patch(rect)
             
             # Texto del fonema centrado en la caja
-            ax.text(x_start + 0.4, y_pos + 0.3, token, color=c_info["text"], 
-                    fontsize=10, fontweight='bold', ha='center', va='center')
+            ax.text(x_start + (box_width / 2.0), y_pos + (box_height / 2.0), token, color=c_info["text"], 
+                    fontsize=9.5, fontweight='bold', ha='center', va='center')
             
-            x_start += 0.95
+            x_start += step_x
 
     # Guardar en buffer de memoria
     buf = io.BytesIO()
