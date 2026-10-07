@@ -26,7 +26,6 @@ filas_fonemas = [
 todos_los_tokens = [token for fila in filas_fonemas for token in fila]
 
 if "estados_matriz" not in st.session_state:
-    # Estado inicial por defecto (ej. Logra)
     st.session_state.estados_matriz = {token: "Logra" for token in todos_los_tokens}
 
 # Leyenda de estados superior idéntica a tu video
@@ -62,7 +61,6 @@ for i, fila in enumerate(filas_fonemas):
     for idx, token in enumerate(fila):
         estado = st.session_state.estados_matriz[token]
         
-        # Asignar icono visual en el botón
         if estado == "Logra":
             ico = "🟢"
         elif estado == "No logra":
@@ -74,7 +72,6 @@ for i, fila in enumerate(filas_fonemas):
             
         with cols[idx]:
             if st.button(f"{token}\n{ico}", key=f"mat_{i}_{idx}_{token}", use_container_width=True):
-                # Ciclar estados al hacer clic: Logra -> No logra -> No valorado -> No esperado -> Logra
                 if estado == "Logra":
                     st.session_state.estados_matriz[token] = "No logra"
                 elif estado == "No logra":
@@ -89,9 +86,9 @@ st.markdown("---")
 
 # Función para generar la imagen PNG exacta utilizando Matplotlib
 def generar_grafico_matriz(estados):
-    # Configuración del tamaño del lienzo
-    fig, ax = plt.subplots(figsize=(12, 7))
-    ax.set_xlim(0, 16)
+    # Ampliamos el límite del eje X de 16 a 17.5 para que quepa toda la fila larga sin cortes
+    fig, ax = plt.subplots(figsize=(13, 7))
+    ax.set_xlim(0, 17.5)
     ax.set_ylim(0, 8)
     ax.axis('off')
     
@@ -103,12 +100,12 @@ def generar_grafico_matriz(estados):
         "No esperado": {"bg": "#cce5ff", "edge": "#b8daff", "text": "#004085"}
     }
     
-    # Dibujar Leyenda superior en el gráfico
+    # Dibujar Leyenda superior en el gráfico ajustada simétricamente
     leyendas = [
-        ("Logra", "#d4edda", "#155724", 1.0),
+        ("Logra", "#d4edda", "#155724", 0.5),
         ("No logra", "#f8d7da", "#721c24", 4.5),
-        ("No valorado", "#e2e3e5", "#383d41", 8.0),
-        ("No esperado para su edad", "#cce5ff", "#004085", 11.5)
+        ("No valorado", "#e2e3e5", "#383d41", 8.5),
+        ("No esperado para su edad", "#cce5ff", "#004085", 12.5)
     ]
     for lbl, bg_l, tx_l, x_pos in leyendas:
         ax.add_patch(patches.Circle((x_pos, 7.3), 0.15, facecolor=bg_l, edgecolor=tx_l, linewidth=1.5))
