@@ -84,11 +84,11 @@ for i, fila in enumerate(filas_fonemas):
 
 st.markdown("---")
 
-# Función para generar la imagen PNG con espacio entre cuadros y control estricto de límites
+# Función para generar la imagen PNG con separación real entre cajitas
 def generar_grafico_matriz(estados):
-    # Lienzo con espacio suficiente para que la fila más larga no rebase el límite
+    # Lienzo amplio para contener toda la estructura sin rebasar
     fig, ax = plt.subplots(figsize=(13, 7))
-    ax.set_xlim(0, 18)
+    ax.set_xlim(0, 18.5)
     ax.set_ylim(0, 8)
     ax.axis('off')
     
@@ -111,14 +111,13 @@ def generar_grafico_matriz(estados):
         ax.add_patch(patches.Circle((x_pos, 7.3), 0.15, facecolor=bg_l, edgecolor=tx_l, linewidth=1.5))
         ax.text(x_pos + 0.3, 7.3, lbl, fontsize=10, va='center', fontweight='bold', color='#333333')
 
-    # Dibujar filas de fonemas con separación (espacio) entre casillas
+    # Dibujar filas de fonemas con separación real y visible
     y_start = 6.0
     row_height = 0.9
     
-    # Parámetros de diseño para las cajitas
-    box_width = 0.78
-    box_height = 0.6
-    step_x = 0.88  # Mayor que box_width para garantizar un espacio visible entre cada cuadro
+    box_width = 0.72   # Ancho de la cajita
+    box_height = 0.6   # Alto de la cajita
+    step_x = 0.86      # Distancia de avance mayor al ancho, creando espacio real (gap de 0.14)
     
     for i, fila in enumerate(filas_fonemas):
         x_start = 0.6
@@ -127,10 +126,10 @@ def generar_grafico_matriz(estados):
             est = estados[token]
             c_info = colores_map[est]
             
-            # Dibujar cajita redondeada del fonema con separación
+            # Dibujar cajita con esquinas redondeadas y separación garantizada
             rect = patches.FancyBboxPatch(
                 (x_start, y_pos), box_width, box_height,
-                boxstyle="round,pad=0.08",
+                boxstyle="round,pad=0.02,rounding_size=0.1",
                 facecolor=c_info["bg"],
                 edgecolor=c_info["edge"],
                 linewidth=1.5
