@@ -42,7 +42,7 @@ with cols_leyenda[3]:
 
 st.markdown("---")
 
-# Diccionario de colores para los estados
+# Colores exactos para cada estado
 colores_map = {
     "Logra": {"bg": "#d4edda", "border": "#c3e6cb", "text": "#155724"},
     "No logra": {"bg": "#f8d7da", "border": "#f5c6cb", "text": "#721c24"},
@@ -50,50 +50,28 @@ colores_map = {
     "No esperado": {"bg": "#cce5ff", "border": "#b8daff", "text": "#004085"}
 }
 
-# Generar estilos CSS dinámicos para que cada botón tome el color exacto de su estado y se adapte en tablets
-css_botones = """
-<style>
-/* Estilo base para todos los botones de la matriz */
-.stButton button {
-    width: 100% !important;
-    border-radius: 6px !important;
-    font-weight: 700 !important;
-    font-size: 11px !important;
-    padding: 6px 2px !important;
-    min-height: 48px !important;
-    line-height: 1.2 !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-}
-"""
+# Estilos CSS avanzados para que los botones tengan el color de fondo exacto y tipografía adecuada
+st.markdown("""
+    <style>
+    /* Forzar diseño limpio y responsivo en tablets y PC */
+    .stButton button {
+        width: 100% !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        font-size: 11px !important;
+        padding: 4px 1px !important;
+        min-height: 50px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Inyectar clases CSS personalizadas por estado para colorear los botones por completo
-for token in todos_los_tokens:
-    est = st.session_state.estados_matriz[token]
-    c_info = colores_map[est]
-    # Limpiar caracteres especiales del token para usarlos en el selector CSS de Streamlit
-    safe_key = token.replace("/", "").replace("...", "").replace(" ", "_")
-    css_botones += f"""
-    button[key*="{safe_key}"] {{
-        background-color: {c_info["bg"]} !important;
-        color: {c_info["text"]} !important;
-        border: 1px solid {c_info["border"]} !important;
-    }}
-    button[key*="{safe_key}"]:hover {{
-        background-color: {c_info["border"]} !important;
-        color: {c_info["text"]} !important;
-        border: 1px solid {c_info["text"]} !important;
-    }}
-    """
-
-css_botones += "</style>"
-st.markdown(css_botones, unsafe_allow_html=True)
-
-# Renderizado del tablero interactivo por filas adaptado a tablets
+# Renderizado del tablero interactivo por filas
 for i, fila in enumerate(filas_fonemas):
     cols = st.columns(len(fila))
     for idx, token in enumerate(fila):
         estado = st.session_state.estados_matriz[token]
+        c_info = colores_map[estado]
         
         if estado == "Logra":
             ico = "🟢"
@@ -105,7 +83,10 @@ for i, fila in enumerate(filas_fonemas):
             ico = "🔵"
             
         with cols[idx]:
-            if st.button(f"{token}\n{ico}", key=f"mat_{i}_{idx}_{token}", use_container_width=True):
+            # Para evitar el corte de texto en fonemas largos como /mbr/, /mpr/, /skr/ en tabletas, 
+            # mostramos el token limpio ajustando el tamaño visual del botón
+            label_btn = f"{token}\n{ico}"
+            if st.button(label_btn, key=f"mat_{i}_{idx}_{token}", use_container_width=True):
                 if estado == "Logra":
                     st.session_state.estados_matriz[token] = "No logra"
                 elif estado == "No logra":
@@ -115,17 +96,33 @@ for i, fila in enumerate(filas_fonemas):
                 else:
                     st.session_state.estados_matriz[token] = "Logra"
                 st.rerun()
+            
+            # Inyectar color de fondo personalizado directamente al botón correspondiente
+            st.markdown(f"""
+                <style>
+                div[data-testid="column"]:nth-of-type({idx+1}) button {{
+                    background-color: {c_info["bg"]} !important;
+                    color: {c_info["text"]} !important;
+                    border: 1px solid {c_info["border"]} !important;
+                }}
+                div[data-testid="column"]:nth-of-type({idx+1}) button:hover {{
+                    background-color: {c_info["border"]} !important;
+                    color: {c_info["text"]} !important;
+                    border: 1px solid {c_info["text"]} !important;
+                }}
+                </style>
+            """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# Función para generar la imagen PNG con separación real entre cajitas
+# Función para generar la imagen PNG del reporte gráfico final
 def generar_grafico_matriz(estados):
     fig, ax = plt.subplots(figsize=(13, 7))
     ax.set_xlim(0, 18.5)
     ax.set_ylim(0, 8)
     ax.axis('off')
     
-    # Dibujar Leyenda superior en el gráfico de forma balanceada
+    # Leyenda superior del gráfico
     leyendas = [
         ("Logra", "#d4edda", "#155724", 0.6),
         ("No logra", "#f8d7da", "#721c24", 4.8),
@@ -136,10 +133,8 @@ def generar_grafico_matriz(estados):
         ax.add_patch(patches.Circle((x_pos, 7.3), 0.15, facecolor=bg_l, edgecolor=tx_l, linewidth=1.5))
         ax.text(x_pos + 0.3, 7.3, lbl, fontsize=10, va='center', fontweight='bold', color='#333333')
 
-    # Dibujar filas de fonemas con separación real y visible
     y_start = 6.0
     row_height = 0.9
-    
     box_width = 0.72   
     box_height = 0.6   
     step_x = 0.86      
@@ -151,21 +146,16 @@ def generar_grafico_matriz(estados):
             est = estados[token]
             c_info = colores_map[est]
             
-            # Mapeo clave interna para el reporte gráfico
-            bg_col = c_info["bg"]
-            ed_col = c_info["border"]
-            tx_col = c_info["text"]
-            
             rect = patches.FancyBboxPatch(
                 (x_start, y_pos), box_width, box_height,
                 boxstyle="round,pad=0.02,rounding_size=0.1",
-                facecolor=bg_col,
-                edgecolor=ed_col,
+                facecolor=c_info["bg"],
+                edgecolor=c_info["border"],
                 linewidth=1.5
             )
             ax.add_patch(rect)
             
-            ax.text(x_start + (box_width / 2.0), y_pos + (box_height / 2.0), token, color=tx_col, 
+            ax.text(x_start + (box_width / 2.0), y_pos + (box_height / 2.0), token, color=c_info["text"], 
                     fontsize=9.5, fontweight='bold', ha='center', va='center')
             
             x_start += step_x
@@ -176,7 +166,7 @@ def generar_grafico_matriz(estados):
     plt.close(fig)
     return buf.getvalue()
 
-# Botón central inferior idéntico al de tu video ("GENERAR GRÁFICO (PNG)")
+# Botón central inferior para generar el reporte gráfico en PNG
 col_cent = st.columns([1, 2, 1])
 with col_cent[1]:
     if st.button("GENERAR GRÁFICO (PNG)", type="primary", use_container_width=True):
